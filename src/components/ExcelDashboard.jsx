@@ -66,6 +66,7 @@ export default function ExcelDashboard() {
   const [progress, setProgress] = useState(0);
   const [searchNCM, setSearchNCM] = useState('');
   const [newRow, setNewRow] = useState(null);
+  const [sortAsc, setSortAsc] = useState(true);
 
   const ncmRef = collection(db, 'ncm');
 
@@ -248,7 +249,13 @@ export default function ExcelDashboard() {
     XLSX.writeFile(wb, "NCM_export.xlsx");
   };
 
-  const filteredData = data.filter(row => row["NCM"]?.toString().includes(searchNCM));
+  const filteredData = [...data]
+    .filter(row => row["NCM"]?.toString().includes(searchNCM))
+    .sort((a, b) => {
+      const ncmA = (a["NCM"] || '').toString();
+      const ncmB = (b["NCM"] || '').toString();
+      return sortAsc ? ncmA.localeCompare(ncmB) : ncmB.localeCompare(ncmA);
+    });
 
   return (
     <div className="container my-4">
@@ -280,6 +287,13 @@ export default function ExcelDashboard() {
           value={searchNCM}
           onChange={e => setSearchNCM(e.target.value)}
         />
+        <Button
+          variant="secondary"
+          className="ms-2"
+          onClick={() => setSortAsc(!sortAsc)}
+        >
+          Ordenar NCM: {sortAsc ? 'Crescente' : 'Decrescente'}
+        </Button>
       </InputGroup>
 
       {progress > 0 && progress < 100 && (
@@ -296,6 +310,57 @@ export default function ExcelDashboard() {
           </tr>
         </thead>
         <tbody>
+          {newRow && (
+            <tr>
+              {headers.map((h, i) => (
+                <td key={i}>
+                  {h === "ultima atualização" ? (
+                    <Form.Control
+                      size="sm"
+                      type="date"
+                      value={newRow[h] || ''}
+                      onChange={(e) => setNewRow({ ...newRow, [h]: e.target.value })}
+                    />
+                  ) : (
+                    <Form.Control
+                      size="sm"
+                      value={newRow[h] || ''}
+                      onChange={(e) => setNewRow({ ...newRow, [h]: e.target.value })}
+                    />
+                  )}
+                </td>
+              ))}
+              <td>
+                <Button
+                  variant="success"
+                  size="sm"
+                  onClick={async () => {
+                    try {
+                      const safeRow = {};
+                      headersOrder.forEach(h => safeRow[h] = newRow[h] ?? '');
+                      await addDoc(ncmRef, safeRow);
+                      toast.success("Novo registro adicionado!");
+                      setNewRow(null);
+                      loadData();
+                    } catch (err) {
+                      console.error(err);
+                      toast.error("Erro ao adicionar.");
+                    }
+                  }}
+                >
+                  Salvar Novo
+                </Button>{' '}
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => setNewRow(null)}
+                >
+                  Cancelar
+                </Button>
+              </td>
+            </tr>
+          )}
+
           {filteredData.map((row, idx) => (
             <tr key={row.id}>
               {headers.map((h, i) => (
