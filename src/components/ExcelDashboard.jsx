@@ -364,7 +364,10 @@ export default function ExcelDashboard() {
           {filteredData.map((row, idx) => (
             <tr key={row.id}>
               {headers.map((h, i) => (
-                <td key={i}>
+                <td
+          key={i}
+          className={h === "IPI" && !row.editMode ? "fw-bold" : ""}
+        >
                   {row.editMode ? (
                     h === "ultima atualização" ? (
                       <Form.Control
